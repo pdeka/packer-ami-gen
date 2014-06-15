@@ -1,0 +1,21 @@
+{
+    "variables": {
+        "aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
+        "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
+        "aws_region": "{{env `AWS_DEFAULT_REGION`}}"
+    },
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "access_key": "{{user `aws_access_key`}}",
+            "secret_key": "{{user `aws_secret_key`}}",
+            "region": "{{user `aws_region`}}",
+            "source_ami": "ami-b72fb78d",
+            "instance_type": "t1.micro",
+            "ssh_username": "ec2-user",
+            "ami_name": "openshift-ready {{timestamp}}",
+            "ami_description": "This AMI is openshift ready",
+            "security_group_id": "sg-96759bf3"
+        }
+    ]
+}
