@@ -16,7 +16,9 @@ fi
 
 packer_config=../config/packer_config.json
 
+mkdir work
 cd work
+
 rm -rf ./*
 curl -LOk https://dl.bintray.com/mitchellh/packer/$packer_file_name.zip
 
