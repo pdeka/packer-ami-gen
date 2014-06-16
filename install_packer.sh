@@ -3,23 +3,29 @@
 
 export AWS_DEFAULT_REGION=ap-southeast-2
 export USER_HOME="$(echo $HOME)"
+export WORKING_DIR="$(pwd)"
 
 echo "User home - $USER_HOME"
+echo "Working directory - $WORKING_DIR"
 
-packer_file_name=0.6.0_darwin_amd64
-working_dir="$(pwd)"
+if [ "$(uname)" == "Darwin" ]; then
+    packer_file_name=0.6.0_darwin_amd64
+else
+    packer_file_name=0.6.0_linux_amd64
+fi
+
 packer_config=../config/packer_config.json
 
 cd work
-#rm -rf ./*
-#curl -LOk https://dl.bintray.com/mitchellh/packer/$packer_file_name.zip
+rm -rf ./*
+curl -LOk https://dl.bintray.com/mitchellh/packer/$packer_file_name.zip
 
 rm -rf extracted_packer
 
 mkdir extracted_packer
 
 unzip "$packer_file_name.zip" -d ./extracted_packer
-export PATH=$PATH:$working_dir/work/extracted_packer/
+export PATH=$PATH:$WORKING_DIR/work/extracted_packer/
 echo "Running Packer"
 packer --version
 packer validate $packer_config

@@ -2,7 +2,8 @@
     "variables": {
         "aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
         "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
-        "aws_region": "{{env `AWS_DEFAULT_REGION`}}"
+        "aws_region": "{{env `AWS_DEFAULT_REGION`}}",
+        "working_dir": "{{env `WORKING_DIR`}}"
     },
     "builders": [
         {
@@ -16,6 +17,13 @@
             "ami_name": "openshift-ready {{timestamp}}",
             "ami_description": "This AMI is openshift ready",
             "security_group_id": "sg-96759bf3"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
+            "script": "{{user `working_dir`}}/config/provision_script.sh"
         }
     ]
 }
