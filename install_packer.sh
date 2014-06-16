@@ -20,7 +20,16 @@ rm -rf work
 mkdir work
 cd work
 
-curl -LOk https://dl.bintray.com/mitchellh/packer/$packer_file_name.zip
+install_package_file="../.installpackages/$packer_file_name.zip"
+echo "Install package file - $install_package_file"
+
+if [ -f "$install_package_file" ]; then
+    echo "Copying install package file stored locally"
+    cp $install_package_file .
+else
+    echo "Downloading install package file"
+    curl -LOk https://dl.bintray.com/mitchellh/packer/$packer_file_name.zip
+fi
 
 rm -rf extracted_packer
 mkdir extracted_packer

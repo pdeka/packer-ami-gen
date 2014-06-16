@@ -19,5 +19,5 @@ name=OpenShift Origin Dependencies - EL6
 baseurl=http://mirror.openshift.com/pub/origin-server/release/3/rhel-6/dependencies/$basearch/
 gpgcheck=0
 EOF
-#echo "Installing Open Shift Origin"
-#sh <(curl -s https://install.openshift.com/)
+echo "Installing Open Shift Origin"
+sh <(curl -s https://install.openshift.com/)
