@@ -1,5 +1,5 @@
 # AMI generation for Open Shift
-generates and AMI with [OpenShift](http://www.openshift.com/).
+Generates an AMI with [OpenShift](http://www.openshift.com/).
 
 ## How to run
 
