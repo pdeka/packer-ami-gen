@@ -16,14 +16,13 @@ fi
 
 packer_config=../config/packer_config.json
 
+rm -rf work
 mkdir work
 cd work
 
-rm -rf ./*
 curl -LOk https://dl.bintray.com/mitchellh/packer/$packer_file_name.zip
 
 rm -rf extracted_packer
-
 mkdir extracted_packer
 
 unzip "$packer_file_name.zip" -d ./extracted_packer
