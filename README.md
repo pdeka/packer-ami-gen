@@ -1,5 +1,5 @@
 # AMI generation for Open Shift
-Generates an AMI with [OpenShift](http://www.openshift.com/).
+Generates an AMI with [OpenShift](http://www.openshift.com/). Note that base AMI image is an RHEL image.
 
 ## How to run
 

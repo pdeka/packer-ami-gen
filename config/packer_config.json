@@ -1,9 +1,10 @@
 {
     "variables": {
-        "aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
-        "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
+        "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+        "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
         "aws_region": "{{env `AWS_DEFAULT_REGION`}}",
-        "working_dir": "{{env `WORKING_DIR`}}"
+        "working_dir": "{{env `WORKING_DIR`}}",
+        "domain_name": "{{env `DOMAIN_NAME`}}"
     },
     "builders": [
         {
@@ -21,9 +22,20 @@
     ],
     "provisioners": [
         {
+            "type": "file",
+            "source": "{{user `working_dir`}}/config/configure_origin.pp",
+            "destination": "/tmp/configure_origin.pp"
+        },
+        {
             "type": "shell",
             "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
-            "script": "{{user `working_dir`}}/config/provision_script.sh"
+            "script": "{{user `working_dir`}}/config/openshift_install.sh",
+            "environment_vars": [
+                "domain={{user `domain_name`}}",
+                "aws_access_key={{user `aws_access_key`}}",
+                "aws_secret_key={{user `aws_secret_key`}}",
+                "aws_region={{user `aws_region`}}"
+            ]
         }
     ]
 }
