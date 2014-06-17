@@ -4,7 +4,6 @@
 export AWS_DEFAULT_REGION=ap-southeast-2
 export USER_HOME="$(echo $HOME)"
 export WORKING_DIR="$(pwd)"
-export DOMAIN_NAME=foobarxyz.com
 
 echo "User home - $USER_HOME"
 echo "Working directory - $WORKING_DIR"
