@@ -1,11 +1,11 @@
 #!/bin/bash
 
-echo "Image preinstallation for openshift"
+echo "Installs image with openshift"
 echo "================================================================="
 cat /etc/*-release
 echo "SELinux running in $(getenforce) mode"
 echo "Note that this script is customised for a RHEL image"
-echo "This script will install the prerequisites and create a local DNS server"
+echo "This script will install the prerequisites, create a local DNS server and install openshift"
 echo "Domain name is $domain"
 echo "AWS region is $aws_region"
 echo "================================================================="
