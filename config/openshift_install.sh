@@ -1,39 +1,51 @@
 #!/bin/bash
 
+function logIt()
+{
+    echo "============================================================================================================="
+    echo "$@"
+    echo "============================================================================================================="
+}
+
+echo "============================================================================================================="
 echo "Installs image with openshift"
-echo "================================================================="
 cat /etc/*-release
 echo "SELinux running in $(getenforce) mode"
 echo "Note that this script is customised for a RHEL image"
 echo "This script will install the prerequisites, create a local DNS server and install openshift"
 echo "Domain name is $domain"
 echo "AWS region is $aws_region"
-echo "================================================================="
+echo "============================================================================================================="
+
 cd /tmp
 
 if [ "$domain" == "" ]; then
-    echo "Domain name not set"
+    logIt "Domain name not set"
     exit 1
 fi
 
 if [ "$aws_region" == "" ]; then
-    echo "AWS region not set"
+    logIt "AWS region not set"
     exit 1
 fi
 
 if [ "$aws_access_key" == "" ]; then
-    echo "AWS access key not set"
+    logIt "AWS access key not set"
     exit 1
 fi
 
 if [ "$aws_secret_key" == "" ]; then
-    echo "AWS access key secret not set"
+    logIt "AWS access key secret not set"
     exit 1
 fi
 
-echo "Install EPEL yum repository"
+
+logIt "Install EPEL yum repository"
+
 yum install -y --nogpgcheck http://mirror.as24220.net/pub/epel/6/i386/epel-release-6-8.noarch.rpm
 
+
+logIt "Setting up /etc/yum.repos.d/Puppetlabs.repo"
 
 cat > /etc/yum.repos.d/Puppetlabs.repo <<EOF
 [puppetdeps]
@@ -48,6 +60,7 @@ gpgcheck=0
 exclude=*mcollective* activemq
 EOF
 
+logIt "Setting up /etc/yum.repos.d/openshift-origin-deps.repo"
 
 cat > /etc/yum.repos.d/openshift-origin-deps.repo <<EOF
 [openshift-origin-deps]
@@ -57,6 +70,8 @@ gpgcheck=0
 enabled=1
 EOF
 
+logIt "Setting up /etc/yum.repos.d/openshift-origin.repo"
+
 cat <<EOF> /etc/yum.repos.d/openshift-origin.repo
 [openshift-origin]
 name=openshift-origin
@@ -65,7 +80,7 @@ gpgcheck=0
 enabled=1
 EOF
 
-
+logIt "Setting up /etc/yum.repos.d/epel.repo"
 
 cat > /etc/yum.repos.d/epel.repo <<EOF
 [epel]
@@ -98,33 +113,37 @@ gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
 EOF
 
+logIt "Clean and update the yum repo before start"
 
 yum clean all
 yum -y update
 yum -y install ruby ruby-devel rubygems puppet ruby193 ntpdate ntp
 
+logIt "Set the clock using clock.redhat.com"
+
 ntpdate clock.redhat.com
 chkconfig ntpd on
 service ntpd start
 
+logIt "Setting up /etc/profile.d/scl193.sh"
+
 cat > /etc/profile.d/scl193.sh <<EOF
 # Setup PATH, LD_LIBRARY_PATH and MANPATH for ruby-1.9
-ruby19_dir=$(dirname `scl enable ruby193 "which ruby"`)
-export PATH=$ruby19_dir:$PATH
-
-ruby19_ld_libs=$(scl enable ruby193 "printenv LD_LIBRARY_PATH")
-export LD_LIBRARY_PATH=$ruby19_ld_libs:$LD_LIBRARY_PATH
-
-ruby19_manpath=$(scl enable ruby193 "printenv MANPATH")
-export MANPATH=$ruby19_manpath:$MANPATH
+export PATH=$(dirname `scl enable ruby193 "which ruby"`):$PATH
+export LD_LIBRARY_PATH=$(scl enable ruby193 "printenv LD_LIBRARY_PATH"):$LD_LIBRARY_PATH
+export MANPATH=$(scl enable ruby193 "printenv MANPATH"):$MANPATH
 EOF
 
 cp -f /etc/profile.d/scl193.sh /etc/sysconfig/mcollective
 chmod 0644 /etc/profile.d/scl193.sh /etc/sysconfig/mcollective
 
+logIt "Installing bind and bind utils"
+
 yum install -y bind bind-utils
 
 keyfile=/var/named/${domain}.key
+
+logIt "Creating the key for bind"
 
 pushd /var/named
 rm K${domain}*
@@ -132,8 +151,8 @@ dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom ${domain}
 KEY="$(grep Key: K${domain}*.private | cut -d ' ' -f 2)"
 popd
 
-echo "This is the key - $KEY"
-#This is the key - e6Vk4xY7qWWuundRYVo0GetARQnT56KhpVNBia3/KY8BphgVs6D0W9ooXqUYb5yTJvscndIY1acKx3ZZwnKaAg==
+logIt "This is the key - $KEY"
+logIt "Setting up named contect"
 
 rndc-confgen -a -r /dev/urandom
 restorecon -v /etc/rndc.* /etc/named.*
@@ -146,11 +165,13 @@ chmod -v 640 /var/named/forwarders.conf
 rm -rvf /var/named/dynamic
 mkdir -vp /var/named/dynamic
 
-echo "This is the domain - $domain"
+logIt "This is the domain - $domain"
 if [ "$domain" == "" ]; then
-    echo "Domain name not set"
+    logIt "Domain name not set"
     exit 1
 fi
+
+logIt "Setting up the named DB"
 
 cat <<EOF > /var/named/dynamic/${domain}.db
 \$ORIGIN .
@@ -168,6 +189,7 @@ ${domain}       IN SOA  ns1.${domain}. hostmaster.${domain}. (
 ns1         A   127.0.0.1
 EOF
 
+logIt "This is the named DB"
 cat /var/named/dynamic/${domain}.db
 
 cat <<EOF > /var/named/${domain}.key
@@ -180,11 +202,14 @@ EOF
 chown -Rv named:named /var/named
 restorecon -rv /var/named
 
-echo "This is the domain $domain"
+logIt "This is the domain $domain"
 if [ "$domain" == "" ]; then
-    echo "Domain name not set"
+    logIt "Domain name not set"
     exit 1
 fi
+
+
+logIt "Setting up /etc/named.conf"
 
 cat <<EOF > /etc/named.conf
 // named.conf
@@ -243,12 +268,17 @@ restorecon /etc/named.conf
 
 service named start
 if [ "$?" == "1" ]; then
+    logIt "Named did not start properly!"
     exit 1;
 fi
+
+logIt "Setting up /etc/resolv.conf"
 
 cat > /etc/resolv.conf <<EOF
 nameserver 127.0.0.1
 EOF
+
+logIt $(cat /etc/resolv.conf)
 
 lokkit --service=dns
 chkconfig named on
@@ -260,10 +290,22 @@ update add broker.${domain} 180 A 127.0.0.1
 send
 EOF
 
+ping -q -c5 broker.${domain} > /dev/null
+if [ $? -eq 0 ]; then
+	logIt "Local DNS started properly"
+else
+    logIt "Local DNS did not start properly!!!!!"
+    exit 1
+fi
+
+
+logIt "Installing puppet openshift"
+
 puppet module install openshift/openshift_origin
 
-cp /tmp/configure_origin.pp /etc/puppet/modules/openshift_origin/configure_origin.pp
+logIt "Copying the config class to puppet open shift"
 
+cp /tmp/configure_origin.pp /etc/puppet/modules/openshift_origin/configure_origin.pp
 
 export FACTER_DOMAIN=$(echo $domain)
 export FACTER_BINDKEY=$(echo $KEY)
@@ -272,11 +314,19 @@ export FACTER_AWS_ACCESS_KEY=$(echo $aws_access_key)
 export FACTER_AWS_SECRET_KEY=$(echo $aws_secret_key)
 export FACTER_AWS_REGION=$(echo $aws_region)
 
-echo "Here are the facter variables set"
+logIt "Here are the facter variables set"
 
 facter | grep 'domain'
 facter | grep 'bindkey'
 facter | grep 'ipaddress'
 facter | grep 'aws_region'
+
+ping -q -c5 broker.${domain} > /dev/null
+if [ $? -eq 0 ]; then
+	logIt "Local DNS is running properly"
+else
+    logIt "Local DNS is not running. Perhaps the resolv.conf is wrong."
+    exit 1
+fi
 
 puppet apply --noop --debug --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
