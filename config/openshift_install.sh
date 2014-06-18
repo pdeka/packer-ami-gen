@@ -367,6 +367,4 @@ else
 	exitIt "/etc/init.d/configure_openshift_instance.sh not found."
 fi
 
-rpm -Va --nofiles --nodigest
-
 puppet apply --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
