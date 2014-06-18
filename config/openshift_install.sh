@@ -285,6 +285,9 @@ logIt $(cat /etc/resolv.conf)
 lokkit --service=dns
 chkconfig named on
 
+
+logIt "Adding broker.${domain} to the config. To add others do an nsupdate and add to the DHCP client config in /etc/dhcp/dhclient-eth0.conf. You have to do both!"
+
 nsupdate -k ${keyfile} <<EOF
 server 127.0.0.1
 update delete broker.${domain} A
