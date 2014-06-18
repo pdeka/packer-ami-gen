@@ -19,6 +19,8 @@ cat /etc/*-release
 echo "SELinux running in $(getenforce) mode"
 echo "Note that this script is customised for a RHEL image"
 echo "This script will install the prerequisites, create a local DNS server and install openshift"
+echo "Please review - http://openshift.github.io/documentation/oo_deployment_guide_comprehensive.html"
+echo "Please review - http://openshift.github.io/documentation/oo_deployment_guide_puppet.html"
 echo "It would probably become a puppet class in the future"
 echo "Domain name is $domain"
 echo "AWS region is $aws_region"
@@ -353,4 +355,4 @@ then
   exitIt "Path for ruby 19 not set. Check /etc/profile.d/scl193.sh. PATH, LD_LIBRARY_PATH and MANPATH should be set.";
 fi
 
-#puppet apply --noop --debug --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
+puppet apply --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
