@@ -329,6 +329,8 @@ puppet module install openshift/openshift_origin
 logIt "Copying the config class to puppet open shift"
 
 cp /tmp/configure_origin.pp /etc/puppet/modules/openshift_origin/configure_origin.pp
+cp /tmp/configure_openshift_instance.sh /etc/init.d/configure_openshift_instance.sh
+chmod +x /etc/init.d/configure_openshift_instance.sh
 
 export FACTER_DOMAIN=$(echo $domain)
 export FACTER_BINDKEY=$(echo $KEY)
@@ -357,5 +359,14 @@ if [[ $(cat /etc/profile.d/scl193.sh) != */opt/rh/ruby193* ]]
 then
   exitIt "Path for ruby 19 not set. Check /etc/profile.d/scl193.sh. PATH, LD_LIBRARY_PATH and MANPATH should be set.";
 fi
+
+if [ -f "/etc/init.d/configure_openshift_instance.sh" ]
+then
+	logIt "/etc/init.d/configure_openshift_instance.sh exists."
+else
+	exitIt "/etc/init.d/configure_openshift_instance.sh not found."
+fi
+
+rpm -Va --nofiles --nodigest
 
 puppet apply --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
