@@ -152,7 +152,7 @@ KEY="$(grep Key: K${domain}*.private | cut -d ' ' -f 2)"
 popd
 
 logIt "This is the key - $KEY"
-logIt "Setting up named contect"
+logIt "Setting up named context"
 
 rndc-confgen -a -r /dev/urandom
 restorecon -v /etc/rndc.* /etc/named.*
@@ -329,4 +329,4 @@ else
     exit 1
 fi
 
-puppet apply --noop --debug --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
+#puppet apply --noop --debug --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
