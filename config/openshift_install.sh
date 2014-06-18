@@ -7,12 +7,19 @@ function logIt()
     echo "============================================================================================================="
 }
 
+function exitIt()
+{
+    logIt "$@"
+    exit 1
+}
+
 echo "============================================================================================================="
 echo "Installs image with openshift"
 cat /etc/*-release
 echo "SELinux running in $(getenforce) mode"
 echo "Note that this script is customised for a RHEL image"
 echo "This script will install the prerequisites, create a local DNS server and install openshift"
+echo "It would probably become a puppet class in the future"
 echo "Domain name is $domain"
 echo "AWS region is $aws_region"
 echo "============================================================================================================="
@@ -20,23 +27,19 @@ echo "==========================================================================
 cd /tmp
 
 if [ "$domain" == "" ]; then
-    logIt "Domain name not set"
-    exit 1
+    exitIt "Domain name not set"
 fi
 
 if [ "$aws_region" == "" ]; then
-    logIt "AWS region not set"
-    exit 1
+    exitIt "AWS region not set"
 fi
 
 if [ "$aws_access_key" == "" ]; then
-    logIt "AWS access key not set"
-    exit 1
+    exitIt "AWS access key not set"
 fi
 
 if [ "$aws_secret_key" == "" ]; then
-    logIt "AWS access key secret not set"
-    exit 1
+    exitIt "AWS access key secret not set"
 fi
 
 
@@ -167,8 +170,7 @@ mkdir -vp /var/named/dynamic
 
 logIt "This is the domain - $domain"
 if [ "$domain" == "" ]; then
-    logIt "Domain name not set"
-    exit 1
+    exitIt "Domain name not set"
 fi
 
 logIt "Setting up the named DB"
@@ -204,8 +206,7 @@ restorecon -rv /var/named
 
 logIt "This is the domain $domain"
 if [ "$domain" == "" ]; then
-    logIt "Domain name not set"
-    exit 1
+    exitIt "Domain name not set"
 fi
 
 
@@ -268,8 +269,7 @@ restorecon /etc/named.conf
 
 service named start
 if [ "$?" == "1" ]; then
-    logIt "Named did not start properly!"
-    exit 1;
+    exitIt "Named did not start properly!"
 fi
 
 logIt "Setting up /etc/resolv.conf"
@@ -290,14 +290,32 @@ update add broker.${domain} 180 A 127.0.0.1
 send
 EOF
 
-ping -q -c5 broker.${domain} > /dev/null
-if [ $? -eq 0 ]; then
-	logIt "Local DNS started properly"
-else
-    logIt "Local DNS did not start properly!!!!!"
-    exit 1
-fi
+cat > /etc/dhcp/dhclient-eth0.conf <<EOF
+prepend domain-name-servers 127.0.0.1;
+supersede host-name "broker";
+supersede domain-name ${domain};
+EOF
 
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<EOF
+DEVICE="eth0"
+BOOTPROTO="dhcp"
+ONBOOT="yes"
+TYPE="Ethernet"
+USERCTL="yes"
+PEERDNS="no"
+IPV6INIT="no"
+PERSISTENT_DHCLIENT="1"
+DNS1=127.0.0.1
+EOF
+
+cat > /etc/sysconfig/network <<EOF
+NETWORKING=yes
+HOSTNAME=broker.${domain}
+NETWORKING_IPV6=no
+NOZEROCONF=yes
+EOF
+
+hostname broker.${domain}
 
 logIt "Installing puppet openshift"
 
@@ -321,12 +339,18 @@ facter | grep 'bindkey'
 facter | grep 'ipaddress'
 facter | grep 'aws_region'
 
+logIt "Doing assertions before running puppet openshift"
+
 ping -q -c5 broker.${domain} > /dev/null
 if [ $? -eq 0 ]; then
 	logIt "Local DNS is running properly"
 else
-    logIt "Local DNS is not running. Perhaps the resolv.conf is wrong."
-    exit 1
+    exitIt "Local DNS is not running. Perhaps the DHCP process over wrote your config. Check /etc/resolv.conf, /etc/dhcp/dhclient-eth0.conf"
+fi
+
+if [[ $(cat /etc/profile.d/scl193.sh) != */opt/rh/ruby193* ]]
+then
+  exitIt "Path for ruby 19 not set. Check /etc/profile.d/scl193.sh. PATH, LD_LIBRARY_PATH and MANPATH should be set.";
 fi
 
 #puppet apply --noop --debug --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
