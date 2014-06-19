@@ -1,4 +1,0 @@
-NETWORKING=yes
-HOSTNAME=broker._domain_
-NETWORKING_IPV6=no
-NOZEROCONF=yes
