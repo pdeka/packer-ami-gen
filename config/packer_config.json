@@ -23,13 +23,8 @@
     "provisioners": [
         {
             "type": "file",
-            "source": "{{user `working_dir`}}/config/configure_openshift_instance.sh",
-            "destination": "/tmp/configure_openshift_instance.sh"
-        },
-        {
-            "type": "file",
-            "source": "{{user `working_dir`}}/config/configure_origin.pp",
-            "destination": "/tmp/configure_origin.pp"
+            "source": "{{user `working_dir`}}/config/files",
+            "destination": "/tmp"
         },
         {
             "type": "shell",

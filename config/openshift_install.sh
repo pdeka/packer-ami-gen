@@ -13,6 +13,27 @@ function exitIt()
     exit 1
 }
 
+function assertFileExists()
+{
+    if [ -f "$@" ]
+    then
+        logIt "$@ exists."
+    else
+        exitIt "$@ not found."
+    fi
+}
+
+function assertFileHas()
+{
+    thisFile=$1
+    shift
+
+    if [[ $(cat "$thisFile") != *$@* ]]
+    then
+      exitIt "File $thisFile does not have the right content.";
+    fi
+}
+
 echo "============================================================================================================="
 echo "Installs image with openshift"
 cat /etc/*-release
@@ -64,6 +85,7 @@ baseurl=http://yum.puppetlabs.com/el/6/products/x86_64/
 gpgcheck=0
 exclude=*mcollective* activemq
 EOF
+assertFileExists "/etc/yum.repos.d/Puppetlabs.repo"
 
 logIt "Setting up /etc/yum.repos.d/openshift-origin-deps.repo"
 
@@ -74,6 +96,7 @@ baseurl=http://mirror.openshift.com/pub/origin-server/release/3/rhel-6/dependenc
 gpgcheck=0
 enabled=1
 EOF
+assertFileExists "/etc/yum.repos.d/openshift-origin-deps.repo"
 
 logIt "Setting up /etc/yum.repos.d/openshift-origin.repo"
 
@@ -84,6 +107,7 @@ baseurl=http://mirror.openshift.com/pub/origin-server/release/3/rhel-6/packages/
 gpgcheck=0
 enabled=1
 EOF
+assertFileExists "/etc/yum.repos.d/openshift-origin.repo"
 
 logIt "Setting up /etc/yum.repos.d/epel.repo"
 
@@ -117,6 +141,7 @@ enabled=1
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
 EOF
+assertFileExists "/etc/yum.repos.d/epel.repo"
 
 logIt "Clean and update the yum repo before start"
 
@@ -138,6 +163,7 @@ export PATH=$(dirname `scl enable ruby193 "which ruby"`):$PATH
 export LD_LIBRARY_PATH=$(scl enable ruby193 "printenv LD_LIBRARY_PATH"):$LD_LIBRARY_PATH
 export MANPATH=$(scl enable ruby193 "printenv MANPATH"):$MANPATH
 EOF
+assertFileExists "/etc/profile.d/scl193.sh"
 
 cp -f /etc/profile.d/scl193.sh /etc/sysconfig/mcollective
 chmod 0644 /etc/profile.d/scl193.sh /etc/sysconfig/mcollective
@@ -192,6 +218,8 @@ ${domain}       IN SOA  ns1.${domain}. hostmaster.${domain}. (
 \$ORIGIN ${domain}.
 ns1         A   127.0.0.1
 EOF
+assertFileExists "/var/named/dynamic/${domain}.db"
+assertFileHas "/var/named/dynamic/${domain}.db" "${domain}"
 
 logIt "This is the named DB"
 cat /var/named/dynamic/${domain}.db
@@ -202,6 +230,9 @@ key ${domain} {
   secret "${KEY}";
 };
 EOF
+
+assertFileExists "/var/named/${domain}.key"
+assertFileHas "/var/named/${domain}.key" "${domain}"
 
 chown -Rv named:named /var/named
 restorecon -rv /var/named
@@ -265,6 +296,8 @@ zone "${domain}" IN {
     allow-update { key ${domain} ; } ;
 };
 EOF
+assertFileExists "/etc/named.conf"
+assertFileHas "/etc/named.conf" "${domain}"
 
 chown -v root:named /etc/named.conf
 restorecon /etc/named.conf
@@ -279,6 +312,7 @@ logIt "Setting up /etc/resolv.conf"
 cat > /etc/resolv.conf <<EOF
 nameserver 127.0.0.1
 EOF
+assertFileExists "/etc/resolv.conf"
 
 logIt $(cat /etc/resolv.conf)
 
@@ -300,6 +334,8 @@ prepend domain-name-servers 127.0.0.1;
 supersede host-name "broker";
 supersede domain-name ${domain};
 EOF
+assertFileExists "/etc/dhcp/dhclient-eth0.conf"
+assertFileHas "/etc/dhcp/dhclient-eth0.conf" "${domain}"
 
 cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<EOF
 DEVICE="eth0"
@@ -312,6 +348,7 @@ IPV6INIT="no"
 PERSISTENT_DHCLIENT="1"
 DNS1=127.0.0.1
 EOF
+assertFileExists "/etc/sysconfig/network-scripts/ifcfg-eth0"
 
 cat > /etc/sysconfig/network <<EOF
 NETWORKING=yes
@@ -319,6 +356,8 @@ HOSTNAME=broker.${domain}
 NETWORKING_IPV6=no
 NOZEROCONF=yes
 EOF
+assertFileExists "/etc/sysconfig/network"
+assertFileHas "/etc/sysconfig/network" "${domain}"
 
 hostname broker.${domain}
 
@@ -328,9 +367,13 @@ puppet module install openshift/openshift_origin
 
 logIt "Copying the config class to puppet open shift"
 
-cp /tmp/configure_origin.pp /etc/puppet/modules/openshift_origin/configure_origin.pp
-cp /tmp/configure_openshift_instance.sh /etc/init.d/configure_openshift_instance.sh
+cp -f /tmp/files/configure_origin.pp /etc/puppet/modules/openshift_origin/configure_origin.pp
+assertFileExists "/etc/puppet/modules/openshift_origin/configure_origin.pp"
+assertFileHas "/etc/puppet/modules/openshift_origin/configure_origin.pp" "class { 'openshift_origin'"
+
+cp -f /tmp/files/configure_openshift_instance.sh /etc/init.d/configure_openshift_instance.sh
 chmod +x /etc/init.d/configure_openshift_instance.sh
+assertFileExists "/etc/init.d/configure_openshift_instance.sh"
 
 export FACTER_DOMAIN=$(echo $domain)
 export FACTER_BINDKEY=$(echo $KEY)
@@ -346,7 +389,7 @@ facter | grep 'bindkey'
 facter | grep 'ipaddress'
 facter | grep 'aws_region'
 
-logIt "Doing assertions before running puppet openshift"
+logIt "Check if the local DNS is running."
 
 ping -q -c5 broker.${domain} > /dev/null
 if [ $? -eq 0 ]; then
@@ -355,16 +398,6 @@ else
     exitIt "Local DNS is not running. Perhaps the DHCP process over wrote your config. Check /etc/resolv.conf, /etc/dhcp/dhclient-eth0.conf"
 fi
 
-if [[ $(cat /etc/profile.d/scl193.sh) != */opt/rh/ruby193* ]]
-then
-  exitIt "Path for ruby 19 not set. Check /etc/profile.d/scl193.sh. PATH, LD_LIBRARY_PATH and MANPATH should be set.";
-fi
+assertFileHas "/etc/profile.d/scl193.sh" "/opt/rh/ruby193"
 
-if [ -f "/etc/init.d/configure_openshift_instance.sh" ]
-then
-	logIt "/etc/init.d/configure_openshift_instance.sh exists."
-else
-	exitIt "/etc/init.d/configure_openshift_instance.sh not found."
-fi
-
-puppet apply --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
+puppet apply --noop --debug --verbose /etc/puppet/modules/openshift_origin/configure_origin.pp
