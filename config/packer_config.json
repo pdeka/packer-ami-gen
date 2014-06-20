@@ -13,7 +13,7 @@
             "secret_key": "{{user `aws_secret_key`}}",
             "region": "{{user `aws_region`}}",
             "source_ami": "ami-b72fb78d",
-            "instance_type": "t1.micro",
+            "instance_type": "m1.small",
             "ssh_username": "ec2-user",
             "ami_name": "openshift-ready {{timestamp}}",
             "ami_description": "This AMI is openshift ready",
